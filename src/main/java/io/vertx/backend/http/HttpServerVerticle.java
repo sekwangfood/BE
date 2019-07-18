@@ -26,41 +26,34 @@ public class HttpServerVerticle extends AbstractVerticle {
     HttpServer server = vertx.createHttpServer();
 
     Router router = Router.router(vertx);
-
     router.route().handler(BodyHandler.create());
+
     router.get("/business/:business_name").handler(this::apiGetBusiness);
     router.get("/").handler(context -> {
       context.response().putHeader("content-type", "text/html").end("Hello");
     });
-
 
     int portNumber = config().getInteger(CONFIG_HTTP_SERVER_PORT, 8080);
     server
       .requestHandler(router)
       .rxListen(portNumber)
       .subscribe(s -> {
-        System.out.println("yes");
         startFuture.complete();
       }, t -> {
         startFuture.fail(t);
       });
+
   }
 
   private void apiGetBusiness(RoutingContext context) {
     String business = context.request().getParam("business_name");
+System.out.println(business);
     dbService.rxFetchBusiness(business)
       .subscribe(dbObject -> {
-        context.response().setStatusCode(200);
-        context.response().putHeader("Content-Type", "application/json");
-        JsonObject wrapped = new JsonObject().put("success", true);
-        wrapped.put("business", dbObject.getString("business"));
-        context.response().end(wrapped.encode());
+        context.response().putHeader("Content-Type", "text/html").end("Success");
       }, t -> {
         context.response().setStatusCode(404);
-        context.response().putHeader("Content-Type", "application/json");
-        context.response().end(new JsonObject()
-          .put("success", false)
-          .put("error", t).encode());
+        context.response().putHeader("Content-Type", "text/html").end("Failure: " + t.getMessage());
       });
   }
 }
